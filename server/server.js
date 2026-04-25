@@ -8,14 +8,33 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+app.get('/health', (_req, res) => {
+  res.json({
+    success: true,
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Routes
 app.use('/api', apiRoutes);
 
-const PORT = process.env.PORT || 5000;
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.originalUrl}` });
+});
+
+const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI;
 
-mongoose.connect(MONGODB_URI)
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI is missing in environment variables.');
+  process.exit(1);
+}
+
+mongoose.connect(MONGODB_URI, { autoIndex: true })
   .then(() => {
     console.log('Connected to MongoDB');
     app.listen(PORT, () => {
